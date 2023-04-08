@@ -1,0 +1,28 @@
+﻿<div>
+	<h1>Booking</h1>
+	
+		<input type="text" class="id" placeholder="id" name="id">
+		<br>
+		<button type="submit" class="btn btn-primary" id="booking_btn" name="booking_btn">Choose</button>
+	
+</div>
+
+<script>
+	$("#booking_btn").click(()=>{
+		$("#booking_btn").prop("disabled",true);
+		$.ajax({
+			url:"/photos",
+			method:"POST",
+			data:{
+				name:$(".id").val()
+			}
+		}).then(data=>{
+			console.log(data);
+			if (data){
+				$("#booking_btn").prop("disabled",data.state_btn);
+			}
+		})
+	})
+
+	
+</script>
