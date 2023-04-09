@@ -3,26 +3,19 @@
 	
 		<input type="text" class="id" placeholder="id" name="id">
 		<br>
-		<button type="submit" class="btn btn-primary" id="booking_btn" name="booking_btn">Choose</button>
+		<a href="/booking"><button type="submit" class="btn btn-primary" id="booking_btn" name="booking_btn">Booking</button></a>
 	
 </div>
 
 <script>
-	$("#booking_btn").click(()=>{
-		$("#booking_btn").prop("disabled",true);
+	$(document).ready(()=>{
 		$.ajax({
-			url:"/photos",
-			method:"POST",
-			data:{
-				name:$(".id").val()
-			}
+			url:"/getStateButton",
+			method:"GET",
 		}).then(data=>{
-			console.log(data);
-			if (data){
-				$("#booking_btn").prop("disabled",data.state_btn);
-			}
+			console.log(data.state[0].state);
+			$("#booking_btn").prop("disabled",data.state[0].state);
 		})
 	})
-
 	
 </script>

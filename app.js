@@ -1,10 +1,20 @@
-﻿const express = require("express");
+﻿require("dotenv").config();
+let connect_redis = {
+  host: process.env.REDIS_HOSTNAME,
+  port: process.env.REDIS_PORT,
+  password: process.env.REDIS_PASSWORD,
+};
+const express = require("express");
 const app = express();
 const path = require("path");
 const hbs_engine = require("express-handlebars");
 const redis = require("redis");
 const bodyParser = require("body-parser");
-const { channel } = require("diagnostics_channel");
+const mongoose = require("mongoose");
+const buttonModel = require("./model/buttonModel");
+mongoose.connect("mongodb://127.0.0.1:27017/PickPitch").then(() => {
+  console.log("connected to database");
+});
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -56,43 +66,60 @@ app.engine("hbs", hbs.engine);
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "hbs");
 
-app.get("/", (req, res) => {
+app.get("/", async (req, res) => {
   res.render("single.hbs");
+});
+
+app.get("/getStateButton", async (req, res) => {
+  const allofButton = await buttonModel.find({});
+  return res.status(200).json({
+    state: allofButton,
+  });
 });
 
 app.post("/", (req, res) => {
   console.log(req.body.hello);
 });
 
-app.post("/photos", async (req, res) => {
+app.get("/booking", async (req, res) => {
+  const button = new buttonModel({
+    state: true,
+  });
+  await button.save();
+  return res.render("booking.hbs");
+});
+
+app.get("/payment", async (req, res) => {
   let pub, sub;
+
   pub = redis.createClient();
   sub = redis.createClient();
   i = 0;
   try {
-    console.log("hello");
-    await pub.connect();
-    await sub.connect();
+    await pub.connect(connect_redis);
+    await sub.connect(connect_redis);
 
     await pub.configSet("notify-keyspace-events", "Ex");
-    await pub.setEx(req.body.name, 5, "hello");
+    await pub.setEx("6432870df3c0a5feb767b0c9", 5, "hello");
 
-  
-    sub.subscribe("__keyevent@0__:expired", async(message, channel) => {
-      
+    let channel = await sub.PUBSUB_CHANNELS("__keyevent@0__:expired");
+
+    if (channel[0] != "__keyevent@0__:expired") {
+      console.log("hello");
+      sub.subscribe("__keyevent@0__:expired", async (message, channel) => {
         console.log(i++);
-        res.status(200).json({
-            data:"thanh cong",
-            state_btn: false
+        const allofButton = await buttonModel.find({});
+        allofButton.forEach(async (button) => {
+          console.log(button);
+          await button.updateOne({
+            state: false,
+          });
         });
-    });
-    
-
-  } catch (err) {   }
-  res.on("finish", () => {
-    console.log("hello 1");
-    sub.unsubscribe("__keyevent@0__:expired");
-  });
+        //res.status(200).json(responseData);
+      });
+    }
+    res.render("payment.hbs");
+  } catch (err) {}
 });
 
 // app.get("/booking", bookingController.getBooking);
